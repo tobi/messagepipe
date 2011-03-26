@@ -1,0 +1,40 @@
+== MessagePipe
+
+MessagePack (http://msgpack.org/) based high performance rpc layer with support for multiple transports (eventually)
+
+== Example
+
+
+server.rb: 
+
+  class TestServer < MessagePipeServer
+
+    def add(a, b)
+      a + b
+    end
+
+    def echo(string)
+      string
+    end
+
+  end
+
+  EventMachine::run do
+    EventMachine::start_server "0.0.0.0", 9191, TestServer
+  end
+
+
+
+client.rb
+
+  client = MessagePipe.new(TcpTransport.new('localhost', 9191))
+  client.call :add, 1, 2 #=> 3
+  client.call :echo, 'hello' #=> 'hello'
+  client.call :does_not_exist #=> raise MessagePipe::RemoteError, 'NoMethodError: no method with name does_not_exist'
+
+== todo
+
+* improve file structure
+* implement EM based client transport
+* implement redis based client transport with delivery guarantees
+* allow calls to be async if transport supports it (will require you to call result.get to get the actual payload)
