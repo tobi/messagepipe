@@ -1,7 +1,6 @@
 require 'rubygems'
-require 'eventmachine'    # EventMachine
+require 'eventmachine'
 require 'msgpack'
-require 'json'
 
 class MessagePipeSocket
   CMD_CALL = 0x01

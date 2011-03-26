@@ -1,9 +1,8 @@
 require 'rubygems'
-require 'eventmachine'    # EventMachine
+require 'eventmachine' 
 require 'msgpack'
-require 'json'
 
-# Server that receives MessagePack and returns JSON
+# Server that receives MessagePack RPC
 class MessagePipeServer < EventMachine::Connection
   CMD_CALL = 0x01
   RET_OK   = 0x02
