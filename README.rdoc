@@ -38,3 +38,4 @@ client.rb
 * implement EM based client transport
 * implement redis based client transport with delivery guarantees
 * allow calls to be async if transport supports it (will require you to call result.get to get the actual payload)
+* support timeouts and reconnects
