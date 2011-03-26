@@ -2,7 +2,25 @@ require 'rubygems'
 require 'eventmachine'
 require 'msgpack'
 
-class MessagePipeSocket
+class TcpTransport
+  def initialize(host, port)    
+    @socket = TCPSocket.open(host, port)
+  end
+
+  def read
+    @socket.recv(4096)
+  end
+
+  def write(data)
+    @socket.print(data)
+  end
+
+  def open?
+    true
+  end
+end
+
+class MessagePipe
   CMD_CALL = 0x01
   RET_OK   = 0x02
   RET_E    = 0x03
@@ -10,16 +28,16 @@ class MessagePipeSocket
   class RemoteError < StandardError
   end
 
-  def initialize(host, port)
-    @socket = TCPSocket.new(host, port)
+  def initialize(transport)
+    @transport = transport
     @unpacker = MessagePack::Unpacker.new
   end
 
   def call(method, *args) 
-    @socket.print([CMD_CALL, method, args].to_msgpack)
+    @transport.write([CMD_CALL, method, args].to_msgpack)
 
-    loop do 
-      @unpacker.feed(@socket.recv(4096))
+    while @transport.open? 
+      @unpacker.feed(@transport.read)
       @unpacker.each do |msg| 
         case msg.first
         when RET_E
@@ -29,13 +47,12 @@ class MessagePipeSocket
         else
           raise RemoteError, "recieved invalid message: #{msg.inspect}"
         end
-      end
-      raise RemoteError, 'disconnected' unless @socket.open? 
+      end      
     end
+
+    raise RemoteError, 'disconnected'
   end
 end
-
-
 
 
 if __FILE__ == $0
@@ -44,7 +61,7 @@ if __FILE__ == $0
   class TestCase < Test::Unit::TestCase
 
     def setup
-      $socket ||= MessagePipeSocket.new 'localhost', 9191
+      $socket ||= MessagePipe.new(TcpTransport.new('localhost', 9191))
     end
 
     def test_simple_rpc
@@ -57,19 +74,19 @@ if __FILE__ == $0
     end
 
     def test_throw_exception
-      assert_raise(MessagePipeSocket::RemoteError) do
+      assert_raise(MessagePipe::RemoteError) do
         $socket.call :throw
       end    
     end
 
     def test_cannot_call_non_existing_method
-      assert_raise(MessagePipeSocket::RemoteError) do
+      assert_raise(MessagePipe::RemoteError) do
         $socket.call :does_not_exist
       end    
     end
 
     def test_cannot_call_private_method
-      assert_raise(MessagePipeSocket::RemoteError) do
+      assert_raise(MessagePipe::RemoteError) do
         $socket.call :private_method
       end    
     end 

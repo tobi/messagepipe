@@ -55,6 +55,11 @@ class TestServer < MessagePipeServer
     'hello'
   end
 
+  def echo(string)
+    string
+  end
+
+
   def throw
     raise StandardError, 'hell'
   end
