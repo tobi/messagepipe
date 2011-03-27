@@ -68,6 +68,11 @@ if __FILE__ == $0
       assert_equal 'hello', $socket.call(:hi)
     end
 
+    def test_large_rpc
+      data = 'x' * 500_000
+      assert_equal data, $socket.call(:echo, data)
+    end
+
     def test_rpc_with_params
       assert_equal 3, $socket.call(:add, 1, 2)
       assert_equal 2000000, $socket.call(:add, 1000000, 1000000)

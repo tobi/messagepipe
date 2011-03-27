@@ -1,6 +1,7 @@
 require 'rubygems'
 require 'eventmachine' 
 require 'msgpack'
+require 'benchmark'
 
 # Server that receives MessagePack RPC
 class MessagePipeServer < EventMachine::Connection
@@ -18,27 +19,36 @@ class MessagePipeServer < EventMachine::Connection
     pac.feed(data)        
     pac.each do |msg|      
       begin        
-        result = receive_object(msg)        
-        send_data([RET_OK, result].to_msgpack)
-      rescue => e
-        send_data([RET_E, "#{e.class.name}: #{e.message}"].to_msgpack)
+
+        response = nil
+
+        secs = Benchmark.realtime do 
+          response = begin 
+            [RET_OK, receive_object(msg)]
+          rescue => e
+            [RET_E, "#{e.class.name}: #{e.message}"]
+          end
+        end
+
+        send_data(response.to_msgpack)
+        
+        puts "#{object_id} - #{msg[1]}(#{msg[2].length} args) - [%.4f ms] [#{response[0] == RET_OK ? 'ok' : 'error'}]" % [secs||0]
+        
       end
     end
   end
 
   def receive_object(msg)    
-    cmd, method, args = *msg
-
-    puts "* #{method} with #{args.length} arg(s)"
-
+    cmd, method, args = *msg    
 
     if cmd != CMD_CALL
-      close
+      unbind
       raise 'Bad client'
     end
 
+    
     if method and public_methods.include?(method)
-      __send__(method, *args)
+      return __send__(method, *args)
     else
       raise NoMethodError, "no method #{method} found."
     end
